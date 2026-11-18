@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗与提醒窗的权限",
+  "windows": ["main", "toast", "rest"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "notification:default",
+    "autostart:default",
+    "dialog:default",
+    "log:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-start-dragging"
+  ]
+}
