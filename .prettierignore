@@ -20,6 +20,7 @@
 
 # tauri / rust 构建
 **/src-tauri/target/**
+**/src-tauri/gen/**
 
 # 构建产物
 **/dist/**

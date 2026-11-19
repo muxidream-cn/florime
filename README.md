@@ -26,6 +26,21 @@ pnpm dev            # 仅启动 Vite 前端
 pnpm build          # vue-tsc 类型检查 + Vite 构建
 ```
 
+## 自动更新
+
+应用内置 Tauri
+updater。设置页「更新」卡片可手动检查新版本，检测到更新后弹出对话框显示下载进度，支持一键下载、安装并重启；「启动时检查更新」为本地偏好（存于浏览器
+`localStorage`，不随规则库同步），开启后每次启动延迟检查一次。
+
+更新清单由 CI 随 Release 发布，客户端从 `https://github.com/muxidream-cn/florime/releases/latest/download/latest.json` 拉取。发布流程：
+
+1. 把 `src-tauri/tauri.conf.json` 与 `src-tauri/Cargo.toml` 的版本号升到目标版本，打 `v<版本号>` tag 并推送。
+2. CI 构建 NSIS 安装包，用仓库 Secret `TAURI_SIGNING_PRIVATE_KEY`（及可选的 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`）签名，产出 `.exe` 与 `.exe.sig`。
+3. release job 校验 tag 与版本一致、签名非空，运行 `scripts/generate-latest-json.mjs` 生成 `latest.json`，随安装包一起挂到该 tag 的 Release。
+
+配置中的 `pubkey` 必须与云端私钥配对，否则客户端校验签名会失败。`latest.json` 中的下载地址固定指向当前仓库的 Release asset，文件名必须为
+`florime_<版本>_x64-setup.exe`。
+
 ## 技术栈
 
 - **Tauri 2** + **Vue 3** + **TypeScript** + **Vite 8**

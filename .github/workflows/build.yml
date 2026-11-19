@@ -1,6 +1,6 @@
 # 自动打包：Windows x64（NSIS）；Microsoft Store MSIX（x64 + arm64）
 #
-# 触发：推 v* tag（打包 NSIS）或手动 dispatch（可勾选额外构建 MSIX）
+# 触发：推 v* tag（打包 NSIS 并发布 Release + latest.json）或手动 dispatch（可勾选额外构建 MSIX）
 # 说明：Windows 端在没有 TAURI_SIGNING_PRIVATE_KEY 时自动关闭 updater 产物，产物可用但应用内更新不生效
 #
 # 需要配置的仓库 Secrets（可选）：
@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   NODE_VERSION: "24"
@@ -173,3 +173,54 @@ jobs:
           name: windows-msix
           path: src-tauri/target/microsoft-store/*.msixbundle
           if-no-files-found: error
+
+  release:
+    name: 发布 Release 与 latest.json
+    needs: [windows]
+    if: startsWith(github.ref, 'refs/tags/v') && !cancelled() && needs.windows.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 校验版本与签名
+        run: |
+          set -euo pipefail
+          ls -l dist
+
+          version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag v${tag} 与 tauri.conf.json 版本 ${version} 不一致"
+            exit 1
+          fi
+
+          exe="dist/florime_${version}_x64-setup.exe"
+          sig="${exe}.sig"
+          if [ ! -s "$exe" ] || [ ! -s "$sig" ]; then
+            echo "::error::缺少安装包或签名文件（$exe / $sig），无法发布可更新的版本"
+            exit 1
+          fi
+
+          echo "APP_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "SIGNATURE_FILE=${sig}" >> "$GITHUB_ENV"
+
+      - name: 生成 latest.json
+        run: |
+          node scripts/generate-latest-json.mjs "$APP_VERSION" "$SIGNATURE_FILE" dist/latest.json
+          cat dist/latest.json
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "dist/florime_${APP_VERSION}_x64-setup.exe" \
+            dist/latest.json \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --verify-tag

@@ -401,7 +401,7 @@ async function elevate(): Promise<void> {
     <Card :id="settingsAnchor('update')">
       <CardHeader>
         <CardTitle>更新</CardTitle>
-        <CardDescription class="text-xs">更新检查与下载暂未实现</CardDescription>
+        <CardDescription class="text-xs">检查新版本并在应用内下载安装</CardDescription>
       </CardHeader>
       <CardContent>
         <UpdateSection />

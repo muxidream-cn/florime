@@ -28,6 +28,7 @@ log = "0.4"
 png = "0.18"
 base64 = "0.22"
 tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
 
 [target.'cfg(windows)'.dependencies]
 tauri-plugin-notification = "2"

@@ -37,6 +37,16 @@
         "installMode": "currentUser",
         "languages": ["SimpChinese", "English"]
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA4OTFGNkIzRDIwMjk2OUMKUldTY2xnTFNzL2FSQ0srbDFmYUZvMUJIVkJ3NUlGQU5xekFSRVRCbERRTHA2Wjl4RzJXRUhFZDgK",
+      "endpoints": ["https://github.com/muxidream-cn/florime/releases/latest/download/latest.json"],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
