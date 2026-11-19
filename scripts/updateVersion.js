@@ -1,4 +1,5 @@
-// 统一更新 fl 版本：package.json / tauri.conf.json / Cargo.toml / appInfo.ts
+// 统一更新应用版本：package.json / tauri.conf.json / appInfo.ts
+// Cargo.toml 默认不更新：改它会触发 Rust 重新编译、令打包缓存失效；需要时用 --cargo 或向导中确认。
 // 无参数且为交互终端时进入向导；带参数时保持命令行模式。
 // Cargo.lock 由 cargo 在下次 check/build 时自动同步，不在此脚本写入。
 
@@ -18,17 +19,34 @@ const TARGET_ID = "app"
 
 const displayPath = (filePath) => relative(rootDir, filePath).replaceAll("\\", "/")
 
-/** 单端发布目标：所有 writer 写入同一版本号 */
+/**
+ * 单端发布目标：默认写入应用版本号。
+ * Cargo.toml 标为 optional：一般无依赖变更时不改它，避免 Rust 打包缓存失效。
+ */
 const VERSION_TARGET = {
   id: TARGET_ID,
   label: "莳间 florime",
-  hint: "安装包 / updater / 设置页 / Rust 壳",
+  hint: "安装包 / updater / 设置页",
   writers: [
     { path: resolve(rootDir, "package.json"), kind: "json", key: "version" },
     { path: resolve(rootDir, "src-tauri/tauri.conf.json"), kind: "json", key: "version" },
-    { path: resolve(rootDir, "src-tauri/Cargo.toml"), kind: "cargo", key: "version" },
     { path: resolve(rootDir, "src/lib/appInfo.ts"), kind: "ts-const", key: "APP_VERSION" },
   ],
+}
+
+const CARGO_WRITER = {
+  path: resolve(rootDir, "src-tauri/Cargo.toml"),
+  kind: "cargo",
+  key: "version",
+  optional: true,
+}
+
+/**
+ * 按 option 决定是否把 Cargo.toml 纳入本次写入与预览
+ * @param includeCargo
+ */
+function activeWriters(includeCargo) {
+  return includeCargo ? [...VERSION_TARGET.writers, CARGO_WRITER] : VERSION_TARGET.writers
 }
 
 /**
@@ -70,6 +88,7 @@ program
   .option("--major", "递增主版本号（0.1.9 -> 1.0.0）")
   .option("--minor", "递增次版本号（0.1.9 -> 0.2.0）")
   .option("--patch", "递增修订号（0.1.9 -> 0.1.10），不传递增选项时的默认行为")
+  .option("--cargo", "同时更新 Cargo.toml 版本（会使 Rust 打包缓存失效，默认跳过）")
   .option("--dry-run", "仅预览将写入的版本号，不修改任何文件")
   .parse(process.argv)
 
@@ -137,10 +156,11 @@ function writeWriter(writer, version, dryRun) {
 
 /**
  *
+ * @param writers
  */
-function inspectTarget() {
+function inspectTarget(writers) {
   const found = []
-  for (const writer of VERSION_TARGET.writers) {
+  for (const writer of writers) {
     const value = readWriterValue(writer)
     if (value !== undefined && String(value).trim() !== "") {
       found.push({ path: displayPath(writer.path), value: String(value) })
@@ -163,6 +183,7 @@ function resolveCliOptions() {
   return {
     action: options.versionTag ? "custom" : (part ?? "patch"),
     customVersion: options.versionTag,
+    includeCargo: Boolean(options.cargo),
     dryRun: Boolean(options.dryRun),
   }
 }
@@ -211,15 +232,20 @@ async function runWizard(inspection) {
     customVersion = parseVersionTag(input)
   }
 
+  const includeCargo = guard(
+    await p.confirm({
+      message: "同时更新 src-tauri/Cargo.toml 版本？（会使 Rust 打包缓存失效，通常无需更新）",
+      initialValue: false,
+    })
+  )
   const dryRun = guard(await p.confirm({ message: "仅预览而不写入文件？", initialValue: false }))
-  return { action, customVersion, dryRun, wizard: p }
+  return { action, customVersion, includeCargo, dryRun, wizard: p }
 }
 
 /**
  *
  */
 async function main() {
-  const inspection = inspectTarget()
   const hasCliArgs = process.argv.slice(2).length > 0
   const useWizard = !hasCliArgs && Boolean(process.stdin.isTTY)
 
@@ -227,6 +253,8 @@ async function main() {
     fail("非交互终端且未提供参数，请显式指定 --patch / --minor / --major / -v（可用 --dry-run 预览）")
   }
 
+  // 一致性以默认三处为准；Cargo.toml 常故意落后，不参与校验
+  const inspection = inspectTarget(VERSION_TARGET.writers)
   if (!inspection.current) {
     const detail = inspection.found.map((item) => `    ${item.path} = ${item.value}`).join("\n")
     fail(`版本记录不一致或未设置：\n${detail || "    未找到任何版本记录"}\n请先用 -v 指定目标版本号统一，或手动对齐后重试`)
@@ -234,7 +262,8 @@ async function main() {
   validateVersion(inspection.current, "版本记录")
 
   const choices = useWizard ? await runWizard(inspection) : resolveCliOptions()
-  const { action, customVersion, dryRun } = choices
+  const { action, customVersion, includeCargo, dryRun } = choices
+  const writers = activeWriters(includeCargo)
 
   let nextVersion
   if (action === "custom") {
@@ -259,17 +288,18 @@ async function main() {
     console.log(`[updateVersion] ${dryRun ? "预览" : "写入"}计划:\n${planText}`)
   }
 
-  for (const writer of VERSION_TARGET.writers) {
+  for (const writer of writers) {
     writeWriter(writer, nextVersion, dryRun)
     console.log(`[updateVersion] ${displayPath(writer.path)} ${dryRun ? "将" : "已"}更新为: ${nextVersion}`)
   }
 
+  const skipNote = includeCargo ? "" : "\n[updateVersion] 已跳过 src-tauri/Cargo.toml（保持 Rust 打包缓存）；如需更新可加 --cargo"
   console.log(
     dryRun
-      ? `\n[updateVersion] 🔍 预览完成，未写入任何文件，共 ${VERSION_TARGET.writers.length} 处待更新`
-      : `\n[updateVersion] ✅ 已完成 ${VERSION_TARGET.writers.length} 处版本号更新`
+      ? `\n[updateVersion] 🔍 预览完成，未写入任何文件，共 ${writers.length} 处待更新${skipNote}`
+      : `\n[updateVersion] ✅ 已完成 ${writers.length} 处版本号更新${skipNote}`
   )
-  console.log("[updateVersion] 提示: Cargo.lock 会在下次 cargo check/build 时自动同步主包版本")
+  if (includeCargo) console.log("[updateVersion] 提示: Cargo.lock 会在下次 cargo check/build 时自动同步主包版本")
 
   if (choices.wizard) choices.wizard.outro(dryRun ? "预览完成" : "版本号更新完成")
 }

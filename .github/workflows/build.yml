@@ -1,4 +1,4 @@
-# 自动打包：Windows x64（NSIS）；Microsoft Store MSIX（x64 + arm64）
+﻿# 自动打包：Windows x64（NSIS）；Microsoft Store MSIX（x64 + arm64）
 #
 # 触发：推 v* tag（打包 NSIS 并发布 Release + latest.json）或手动 dispatch（可勾选额外构建 MSIX）
 # 说明：Windows 端在没有 TAURI_SIGNING_PRIVATE_KEY 时自动关闭 updater 产物，产物可用但应用内更新不生效

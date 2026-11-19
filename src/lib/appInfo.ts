@@ -8,7 +8,7 @@
 export const APP_NAME = "莳间"
 export const APP_NAME_EN = "florime"
 /** 与 tauri.conf.json / Cargo.toml 的 version 保持一致 */
-export const APP_VERSION = "0.1.0"
+export const APP_VERSION = "0.1.1"
 export const APP_DESCRIPTION = "Windows 专注时长管理工具"
 export const APP_AUTHOR = "默默 (MoMo) <1224021291@qq.com>"
 export const APP_LICENSE = "MIT"

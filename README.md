@@ -35,7 +35,8 @@ updater。设置页「更新」卡片可手动检查新版本，检测到更新�
 更新清单由 CI 随 Release 发布，客户端从 `https://github.com/muxidream-cn/florime/releases/latest/download/latest.json` 拉取。发布流程：
 
 1. 用 `pnpm updateVersion` 统一升级版本号（交互向导，或 `-v 0.2.0` / `--major` / `--minor` / `--patch`，可加 `--dry-run` 预览），会同步更新
-   `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 与 `src/lib/appInfo.ts` 四处；然后打 `v<版本号>` tag 并推送。
+   `package.json`、`src-tauri/tauri.conf.json` 与 `src/lib/appInfo.ts` 三处。`src-tauri/Cargo.toml` 默认跳过以保持 Rust
+   打包缓存，仅在依赖确需变更时加 `--cargo`（更新后 `Cargo.lock` 会在下次 cargo 构建时自动同步）；然后打 `v<版本号>` tag 并推送。
 2. CI 构建 NSIS 安装包，用仓库 Secret `TAURI_SIGNING_PRIVATE_KEY`（及可选的 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`）签名，产出 `.exe` 与 `.exe.sig`。
 3. release job 校验 tag 与版本一致、签名非空，运行 `scripts/generate-latest-json.mjs` 生成 `latest.json`，随安装包一起挂到该 tag 的 Release。
 
@@ -89,19 +90,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-microsoft-
 
 ## 脚本说明
 
-| 脚本             | 说明                                             |
-| ---------------- | ------------------------------------------------ |
-| `dev`            | 启动 Vite 前端开发服务器                         |
-| `build`          | 类型检查并构建前端                               |
-| `preview`        | 预览前端构建产物                                 |
-| `app:dev`        | 启动 Tauri 开发环境                              |
-| `app:build`      | 构建 Windows 安装包                              |
-| `updateVersion`  | 统一升级四处版本号（交互向导或命令行参数）       |
-| `check`          | ESLint 检查                                      |
-| `check:prettier` | Prettier 格式检查                                |
-| `lint`           | ESLint 检查并自动修复                            |
-| `lint:prettier`  | Prettier 格式化                                  |
-| `commit`         | 暂存区检查并进入引导式提交（commitlint + husky） |
+| 脚本             | 说明                                              |
+| ---------------- | ------------------------------------------------- |
+| `dev`            | 启动 Vite 前端开发服务器                          |
+| `build`          | 类型检查并构建前端                                |
+| `preview`        | 预览前端构建产物                                  |
+| `app:dev`        | 启动 Tauri 开发环境                               |
+| `app:build`      | 构建 Windows 安装包                               |
+| `updateVersion`  | 统一升级三处应用版本号（Cargo.toml 需加 --cargo） |
+| `check`          | ESLint 检查                                       |
+| `check:prettier` | Prettier 格式检查                                 |
+| `lint`           | ESLint 检查并自动修复                             |
+| `lint:prettier`  | Prettier 格式化                                   |
+| `commit`         | 暂存区检查并进入引导式提交（commitlint + husky）  |
 
 提交信息遵循 commitlint 规范（引导式提交可用 `pnpm commit`）。
 
