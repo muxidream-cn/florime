@@ -211,7 +211,7 @@ jobs:
 
       - name: 生成 latest.json
         run: |
-          node scripts/generate-latest-json.mjs "$APP_VERSION" "$SIGNATURE_FILE" dist/latest.json
+          node scripts/generate-latest-json.mjs "$APP_VERSION" "$SIGNATURE_FILE" dist/latest.json "dist/florime_${APP_VERSION}_x64-setup.exe"
           cat dist/latest.json
 
       - name: 创建 Release

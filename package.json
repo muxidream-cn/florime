@@ -1,6 +1,6 @@
 {
   "name": "florime",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "license": "MIT",
   "author": "默默 (MoMo) <1224021291@qq.com>",
@@ -37,6 +37,7 @@
     "@lucide/vue": "^1.74.0",
     "@tauri-apps/api": "^2.12.5",
     "@tauri-apps/plugin-dialog": "^2.8.4",
+    "@tauri-apps/plugin-opener": "^2.7.3",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "@vueuse/core": "^15.0.0",

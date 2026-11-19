@@ -3,6 +3,7 @@ import { LoaderCircle, RefreshCcw } from "@lucide/vue"
 import { computed } from "vue"
 import { toast } from "vue-sonner"
 
+import ChangelogDialog from "@/components/ChangelogDialog.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
@@ -46,11 +47,14 @@ async function checkUpdate(): Promise<void> {
         <div class="text-xs">当前版本</div>
         <div class="text-muted-foreground text-xs">V{{ APP_VERSION }}</div>
       </div>
-      <Button variant="outline" size="sm" :disabled="updater.checking.value" @click="checkUpdate">
-        <LoaderCircle v-if="updater.checking.value" class="animate-spin" data-icon="inline-start" />
-        <RefreshCcw v-else data-icon="inline-start" />
-        检查更新
-      </Button>
+      <div class="flex items-center gap-3">
+        <ChangelogDialog />
+        <Button variant="outline" size="sm" :disabled="updater.checking.value" @click="checkUpdate">
+          <LoaderCircle v-if="updater.checking.value" class="animate-spin" data-icon="inline-start" />
+          <RefreshCcw v-else data-icon="inline-start" />
+          检查更新
+        </Button>
+      </div>
     </div>
   </div>
 </template>

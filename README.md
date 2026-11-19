@@ -40,6 +40,16 @@ updater。设置页「更新」卡片可手动检查新版本，检测到更新�
 2. CI 构建 NSIS 安装包，用仓库 Secret `TAURI_SIGNING_PRIVATE_KEY`（及可选的 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`）签名，产出 `.exe` 与 `.exe.sig`。
 3. release job 校验 tag 与版本一致、签名非空，运行 `scripts/generate-latest-json.mjs` 生成 `latest.json`，随安装包一起挂到该 tag 的 Release。
 
+更新说明取自仓库根的 `CHANGELOG.md`（简洁版本分节，如 `## v0.1.3`）：`scripts/generate-latest-json.mjs` 按目标版本提取对应段落写入
+`latest.json` 的 `notes`，更新对话框直接展示；设置页「更新」卡片的「查看更新日志」可内嵌浏览完整 CHANGELOG。找不到对应版本段落时 notes 降级为
+「详见 Release 说明」并给出 CI 警告。
+
+`latest.json` 顶层另有两项扩展字段，客户端从 `update.rawJson` 读取：
+
+- `size`：安装包字节大小，由生成脚本读取上传的 `florime_<版本>_x64-setup.exe` 得到，用于弹窗展示包体大小与字节级下载进度。
+- `force_update`：是否强制更新。在 `CHANGELOG.md` 对应版本段落内单独写一行 `force: true`（或 `- force: true`）即可开启；该行会从 `notes`
+  中剔除，默认 `false`。强制更新时弹窗隐藏「取消更新」入口，只能通过底部安装按钮操作。
+
 配置中的 `pubkey` 必须与云端私钥配对，否则客户端校验签名会失败。`latest.json` 中的下载地址固定指向当前仓库的 Release asset，文件名必须为
 `florime_<版本>_x64-setup.exe`。
 
