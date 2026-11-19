@@ -118,7 +118,7 @@ jobs:
     name: Windows MSIX x64 + arm64
     # hosted runner 需具备 Visual Studio 的 MSVC ARM64/ARM64EC 与 C++ Clang 组件；
     # 脚本在缺少这些组件时会主动报错，不会产出残缺包。
-    if: inputs.build_store
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.build_store
     runs-on: windows-latest
     timeout-minutes: 90
     continue-on-error: true
