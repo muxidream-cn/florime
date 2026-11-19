@@ -34,18 +34,42 @@ pnpm build          # vue-tsc 类型检查 + Vite 构建
 
 ## 目录结构
 
-| 路径                        | 说明                                                              |
-| --------------------------- | ----------------------------------------------------------------- |
-| `src/`                      | 前端 Vue 应用源码                                                 |
-| `src/components/`           | 业务组件与 shadcn-vue UI 组件                                     |
-| `src/views/`                | 页面视图                                                          |
-| `src/stores/`               | Pinia 状态                                                        |
-| `src/composables/`          | 组合式函数                                                        |
-| `src/assets/css/`           | 全局样式与主题 token                                              |
-| `src-tauri/src/`            | Rust 后端模块（`monitor/` 计时、`win/` Win32 交互、`db/` 持久化） |
-| `src-tauri/icons/`          | 应用图标                                                          |
-| `src-tauri/tauri.conf.json` | Tauri 应用与打包配置                                              |
-| `.github/workflows/`        | GitHub Actions 工作流                                             |
+| 路径                                       | 说明                                                              |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `src/`                                     | 前端 Vue 应用源码                                                 |
+| `src/components/`                          | 业务组件与 shadcn-vue UI 组件                                     |
+| `src/views/`                               | 页面视图                                                          |
+| `src/stores/`                              | Pinia 状态                                                        |
+| `src/composables/`                         | 组合式函数                                                        |
+| `src/assets/css/`                          | 全局样式与主题 token                                              |
+| `src-tauri/src/`                           | Rust 后端模块（`monitor/` 计时、`win/` Win32 交互、`db/` 持久化） |
+| `src-tauri/icons/`                         | 应用图标                                                          |
+| `src-tauri/tauri.conf.json`                | Tauri 应用与打包配置                                              |
+| `src-tauri/tauri.microsoftstore.conf.json` | Microsoft Store 打包专用配置                                      |
+| `scripts/build-microsoft-store.ps1`        | MSIXBundle 构建脚本                                               |
+| `.github/workflows/`                       | GitHub Actions 工作流                                             |
+
+## Microsoft Store 打包
+
+`app:build` 产出 NSIS 安装包；Microsoft Store 上传用的 MSIXBundle 由 Windows SDK 的 `MakeAppx.exe` 单独封装，脚本会构建 x64 +
+arm64 两个架构、生成 manifest 并自检语言/发布者/图标。前置要求见参考项目的打包文档；身份不写死在代码里，运行前需设置三个环境变量（CI 中由同名仓库 Variables 注入）：
+
+| 环境变量                      | 说明                                        |
+| ----------------------------- | ------------------------------------------- |
+| `MSIX_IDENTITY_NAME`          | Partner Center 分配的 Package/Identity/Name |
+| `MSIX_PUBLISHER`              | Partner Center 分配的 Publisher（`CN=...`） |
+| `MSIX_PUBLISHER_DISPLAY_NAME` | Partner Center 分配的发布者显示名           |
+
+本地构建：
+
+```powershell
+$env:MSIX_IDENTITY_NAME = "..."
+$env:MSIX_PUBLISHER = "CN=..."
+$env:MSIX_PUBLISHER_DISPLAY_NAME = "..."
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-microsoft-store.ps1
+```
+
+产物位于 `src-tauri/target/microsoft-store/florime_<四段版本>_x64_arm64.msixbundle`。
 
 ## 脚本说明
 

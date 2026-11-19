@@ -1,4 +1,4 @@
-# 自动打包：Windows x64（NSIS）；可选 Microsoft Store MSIX（x64）
+# 自动打包：Windows x64（NSIS）；Microsoft Store MSIX（x64 + arm64）
 #
 # 触发：推 v* tag（打包 NSIS）或手动 dispatch（可勾选额外构建 MSIX）
 # 说明：Windows 端在没有 TAURI_SIGNING_PRIVATE_KEY 时自动关闭 updater 产物，产物可用但应用内更新不生效
@@ -6,6 +6,11 @@
 # 需要配置的仓库 Secrets（可选）：
 #   TAURI_SIGNING_PRIVATE_KEY             Tauri updater 私钥；不配则 Windows 产物不带 .sig
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD    可选，私钥口令
+#
+# 需要配置的仓库 Variables（仅 MSIX）：
+#   MSIX_IDENTITY_NAME             Partner Center 分配的 Package/Identity/Name
+#   MSIX_PUBLISHER                 Partner Center 分配的 Publisher（CN=...）
+#   MSIX_PUBLISHER_DISPLAY_NAME    Partner Center 分配的发布者显示名
 #
 # 版本号从 src-tauri/tauri.conf.json 读取，tag 必须为 v<版本号>
 
@@ -18,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       build_store:
-        description: 额外出 Microsoft Store MSIX（x64，需先补齐 MSIX 配置与构建脚本）
+        description: 额外出 Microsoft Store MSIX（x64 + arm64，需配置 MSIX_* Variables）
         type: boolean
         default: false
 
@@ -110,25 +115,27 @@ jobs:
           if-no-files-found: error
 
   windows-store:
-    name: Windows MSIX x64
-    # 本项目当前只有 NSIS 打包配置；启用 MSIX 前需先补充：
-    #   1. src-tauri/tauri.store.conf.json（含 bundle.targets = ["msix"] 等商店配置）
-    #   2. MSIX 构建脚本（例如 scripts/build-microsoft-store.ps1）
-    # 未补齐前请勿触发，否则必然失败。
+    name: Windows MSIX x64 + arm64
+    # hosted runner 需具备 Visual Studio 的 MSVC ARM64/ARM64EC 与 C++ Clang 组件；
+    # 脚本在缺少这些组件时会主动报错，不会产出残缺包。
     if: inputs.build_store
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    continue-on-error: true
+    env:
+      MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+      MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+      MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: 校验 MSIX 前置配置
+      - name: 校验 MSIX 身份配置
         shell: pwsh
         run: |
-          if (-not (Test-Path src-tauri/tauri.store.conf.json)) {
-            throw "缺少 src-tauri/tauri.store.conf.json，请先补齐 MSIX 打包配置"
-          }
-          if (-not (Test-Path scripts/build-microsoft-store.ps1)) {
-            throw "缺少 scripts/build-microsoft-store.ps1，请先补齐 MSIX 构建脚本"
+          foreach ($name in @("MSIX_IDENTITY_NAME", "MSIX_PUBLISHER", "MSIX_PUBLISHER_DISPLAY_NAME")) {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) {
+              throw "缺少仓库 Variable $name，请在 Settings → Secrets and variables → Actions → Variables 中配置"
+            }
           }
 
       - uses: actions/setup-node@v7
@@ -143,12 +150,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: |
+            x86_64-pc-windows-msvc
+            aarch64-pc-windows-msvc
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "src-tauri -> target"
-          key: windows-msix-x64
+          key: windows-msix
           cache-on-failure: true
 
       - name: 安装依赖
@@ -157,7 +166,7 @@ jobs:
       - name: 构建 MSIX 安装包
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-microsoft-store.ps1 -Architectures x64
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-microsoft-store.ps1
 
       - uses: actions/upload-artifact@v7
         with:
