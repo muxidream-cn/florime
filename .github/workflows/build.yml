@@ -166,7 +166,7 @@ jobs:
       - name: 构建 MSIX 安装包
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-microsoft-store.ps1
+          pwsh -NoProfile -File scripts/build-microsoft-store.ps1
 
       - uses: actions/upload-artifact@v7
         with:

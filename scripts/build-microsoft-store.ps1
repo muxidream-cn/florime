@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [string]$OutputDirectory,
   # 只打指定架构的 MSIX。默认 all（x64 + arm64）
